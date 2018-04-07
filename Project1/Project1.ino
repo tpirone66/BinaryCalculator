@@ -14,6 +14,7 @@
  * 2 = Byte 2
  * 3 = Solution
  * 4 = Adjust Contrast
+ * 5 = Adjust Backlight
  * 
  * Pressing the left or right button on screen 0 and 3 have no effect.
  * However, on screens 1, 2, and 4, the effect is as follows:
@@ -36,6 +37,7 @@ LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 // set up a constant for the contrast pin
 const int switchPin = 6;
+const int backlightPin = 10;
 
 // variables to hold the value of the switch pins
 int switch1State = 0;
@@ -47,6 +49,7 @@ int prevSwitch2State = 0;
 
 // default value of screen contrast
 int contrast = 0;
+int backlight = 255;
 
 // initialize the starting screen
 int screen = 0;
@@ -97,10 +100,11 @@ int x3x0 = 0;
 
 void setup() {
   // set up the number of columns and rows on the LCD
-  lcd.begin(16, 2);
+  lcd.begin(20, 2);
 
   // set up the switch pin as an input
   analogWrite(switchPin, contrast);
+  analogWrite(backlightPin, backlight);
 
   // print a message to the LCD
   lcd.print("Hello! Press");
@@ -121,7 +125,7 @@ void loop() {
     screen++;
 
     // reset to the welcome screen if we reach last screen
-    if (screen > 4) {
+    if (screen > 5) {
       lcd.clear();
       screen = 0;
       setup();
@@ -155,6 +159,11 @@ void loop() {
       
       case 4: {
         adjustContrast();
+        break;
+      }
+
+      case 5: {
+        adjustBacklight();
         break;
       }
     }
@@ -201,6 +210,18 @@ void loop() {
     // right button is pressed
     if (switch2State == HIGH && switch1State == LOW) {
       decreaseContrast();
+    }
+  }
+
+  // Adjust Backlight Screen
+  if (screen == 5) {
+    // left button is pressed
+    if (switch1State == HIGH && switch2State == LOW) {
+      increaseBacklight();
+    }
+    // right button is pressed
+    if (switch2State == HIGH && switch1State == LOW) {
+      decreaseBacklight();
     }
   }
 
@@ -496,3 +517,43 @@ void decreaseContrast() {
   }
 }
 
+// method called if screen is 5
+void adjustBacklight() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Adjust Backlight");
+  lcd.setCursor(0, 1);
+  lcd.print("Left +   Right -");
+}
+
+// increase contrast on screen 5
+void increaseBacklight() {
+  // left button is remained pressed or unpressed
+  if (switch1State != prevSwitch1State) {
+    // highest backlight possible
+    if (backlight >= 255) {
+      backlight = 255;
+    }
+    else {
+      // lower backlight
+      backlight = backlight + 17;
+    }
+    analogWrite(backlightPin, backlight);
+  }
+}
+
+// increase contrast on screen 5
+void decreaseBacklight() {
+  // right button is remained pressed or unpressed
+  if (switch2State != prevSwitch2State) {
+    // lowest backlight possible
+    if (backlight <= 0) {
+      backlight = 0;
+    }
+    else {
+      // raise backlight
+      backlight = backlight - 17;
+    }
+    analogWrite(backlightPin, backlight);
+  }
+}
