@@ -35,8 +35,8 @@
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
-// set up a constant for the contrast pin
-const int switchPin = 6;
+// set up constants for the contrast and backlight pin
+const int contrastPin = 6;
 const int backlightPin = 10;
 
 // variables to hold the value of the switch pins
@@ -59,6 +59,11 @@ int binaryNum = 0;
 
 // initial cursor and text position
 int column = 0;
+
+// the last time the output pin was toggled
+unsigned long lastDebounceTime = 0;
+// the debounce time; increase if the output flickers
+unsigned long debounceDelay = 100;
 
 /*
  * The values below represent the corresponding values for each bit.
@@ -103,7 +108,7 @@ void setup() {
   lcd.begin(20, 2);
 
   // set up the switch pin as an input
-  analogWrite(switchPin, contrast);
+  analogWrite(contrastPin, contrast);
   analogWrite(backlightPin, backlight);
 
   // print a message to the LCD
@@ -118,10 +123,10 @@ void setup() {
 void loop() {
   switch1State = digitalRead(8);
   switch2State = digitalRead(9);
-
+  
   // change screens if both buttons are pressed
   if (switch1State == HIGH && switch2State == HIGH) {
-    delay(200);
+    delay(250);
     screen++;
 
     // reset to the welcome screen if we reach last screen
@@ -171,15 +176,20 @@ void loop() {
 
   // Byte 1 Screen
   if (screen == 1) {
-    // left button is pressed
-    if (switch1State == HIGH && switch2State == LOW) {
-      if (column < 7) {
-        moveCursor(); 
+    // filter out any button noise
+    if (millis() - lastDebounceTime > debounceDelay) {
+      // left button is pressed
+      if (switch1State == HIGH && switch2State == LOW) {
+        if (column < 7) {
+          moveCursor();
+          lastDebounceTime = millis();
+        }
       }
-    }
-    // right button is pressed
-    if (switch2State == HIGH && switch1State == LOW) {
-      byteOneZeroOrOne();                          
+      // right button is pressed
+      if (switch2State == HIGH && switch1State == LOW) {
+        byteOneZeroOrOne(); 
+        lastDebounceTime = millis();                        
+      }
     }
     lcd.setCursor(column, 1);
     lcd.cursor();
@@ -187,41 +197,56 @@ void loop() {
 
   // Byte 2 Screen
   if (screen == 2) {
-    // left button is pressed
-    if (switch1State == HIGH && switch2State == LOW) {
-      if (column < 7) {
-        moveCursor();
+    // filter out any button noise
+    if (millis() - lastDebounceTime > debounceDelay) {
+      // left button is pressed
+      if (switch1State == HIGH && switch2State == LOW) {
+        if (column < 7) {
+          moveCursor();
+          lastDebounceTime = millis();
+        }
       }
+      // right button is pressed
+      if (switch2State == HIGH && switch1State == LOW) {
+        byteTwoZeroOrOne();
+        lastDebounceTime = millis();
+      }
+      lcd.setCursor(column, 1);
+      lcd.cursor();
     }
-    // right button is pressed
-    if (switch2State == HIGH && switch1State == LOW) {
-      byteTwoZeroOrOne();
-    }
-    lcd.setCursor(column, 1);
-    lcd.cursor();
   }
 
   // Adjust Contrast Screen
   if (screen == 4) {
-    // left button is pressed
-    if (switch1State == HIGH && switch2State == LOW) {
-      increaseContrast();
-    }
-    // right button is pressed
-    if (switch2State == HIGH && switch1State == LOW) {
-      decreaseContrast();
+    //filter out any button noise
+    if (millis() - lastDebounceTime > debounceDelay) {
+      // left button is pressed
+      if (switch1State == HIGH && switch2State == LOW) {
+        increaseContrast();
+        lastDebounceTime = millis();
+      }
+      // right button is pressed
+      if (switch2State == HIGH && switch1State == LOW) {
+        decreaseContrast();
+        lastDebounceTime = millis();
+      }
     }
   }
 
   // Adjust Backlight Screen
   if (screen == 5) {
-    // left button is pressed
-    if (switch1State == HIGH && switch2State == LOW) {
-      increaseBacklight();
-    }
-    // right button is pressed
-    if (switch2State == HIGH && switch1State == LOW) {
-      decreaseBacklight();
+    // filter out any button noise
+    if (millis() - lastDebounceTime > debounceDelay) {
+      // left button is pressed
+      if (switch1State == HIGH && switch2State == LOW) {
+        increaseBacklight();
+        lastDebounceTime = millis();
+      }
+      // right button is pressed
+      if (switch2State == HIGH && switch1State == LOW) {
+        decreaseBacklight();
+        lastDebounceTime = millis();
+      }
     }
   }
 
@@ -497,7 +522,7 @@ void increaseContrast() {
       // lower contrast
       contrast = contrast - 10;
     }
-    analogWrite(switchPin, contrast);
+    analogWrite(contrastPin, contrast);
   }
 }
 
@@ -513,7 +538,7 @@ void decreaseContrast() {
       // raise contrast
       contrast = contrast + 10;
     }
-    analogWrite(switchPin, contrast);
+    analogWrite(contrastPin, contrast);
   }
 }
 
@@ -557,3 +582,4 @@ void decreaseBacklight() {
     analogWrite(backlightPin, backlight);
   }
 }
+
